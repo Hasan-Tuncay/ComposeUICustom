@@ -1,0 +1,63 @@
+@Composable
+fun AutoResizedText(
+    modifier: Modifier = Modifier,
+    text: Int = 0,
+    textString: String = "",
+    color: Color = Color.Black, // Renk manuel olarak ayarlanıyor
+    maxFontSize: TextUnit, // Boyut manuel olarak ayarlanıyor
+    minFontSize: TextUnit,
+    fontWeight: FontWeight = FontWeight.Normal,
+    onTextSizeCalculated: (TextUnit) -> Unit
+) {
+    var overflow by remember { mutableStateOf(TextOverflow.Clip) }
+    var resizedTextStyle by remember {
+        mutableStateOf(
+            TextStyle(
+                fontSize = maxFontSize, // Başlangıç boyutu olarak maxFontSize kullanılıyor
+                color = color, // Renk manuel olarak ayarlanıyor
+                fontWeight = fontWeight
+            )
+        )
+    }
+    var shouldDraw by remember { mutableStateOf(false) }
+    val mutableInteractionSourceState = remember { MutableInteractionSource() }
+
+    val textSelected = if (text == 0) textString else stringResource(id = text)
+
+    Text(
+        text = textSelected,
+        color = color, // Manuel renk kullanılıyor
+        fontWeight = fontWeight,
+        modifier = modifier
+            .clickable(
+                interactionSource = mutableInteractionSourceState,
+                indication = null,
+                onClick = {}
+            )
+            .drawWithContent {
+                if (shouldDraw) {
+                    drawContent()
+                }
+            },
+        softWrap = false,
+        overflow = overflow,
+        maxLines = 1,
+        style = resizedTextStyle,
+        onTextLayout = { result ->
+            if (result.didOverflowWidth) {
+                if (resizedTextStyle.fontSize > minFontSize) {
+                    resizedTextStyle = resizedTextStyle.copy(
+                        fontSize = (resizedTextStyle.fontSize * 0.95).coerceAtLeast(minFontSize)
+                    )
+                } else {
+                    overflow = TextOverflow.Ellipsis
+                }
+                onTextSizeCalculated(resizedTextStyle.fontSize)
+            } else {
+                val finalTextSize = resizedTextStyle.fontSize.takeIf { it >= minFontSize } ?: minFontSize
+                onTextSizeCalculated(finalTextSize) // Eğer hesaplanan değer minimumdan küçükse, minimum değeri döndür
+                shouldDraw = true
+            }
+        }
+    )
+}
